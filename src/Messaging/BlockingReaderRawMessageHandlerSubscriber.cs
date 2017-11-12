@@ -9,18 +9,18 @@ namespace Messaging
     /// An adapter to a blocking/polling Raw Message Handler Subscriber
     /// </summary>
     /// <remarks>
-    /// Creates a task per subscription to call a blocking <see cref="IBlockingMessageReader{TOptions}"/> for messages
+    /// Creates a task per subscription to call a blocking <see cref="IBlockingRawMessageReader{TOptions}"/> for messages
     /// A call to subscribe will return a task which completes when the subcription is done. 
-    /// A subscription is considered to be done when a <see cref="IBlockingMessageReader{TOptions}"/> is created
-    /// using the provided <see cref="IBlockingMessageReaderFactory{TOptions}"/> factory
+    /// A subscription is considered to be done when a <see cref="IBlockingRawMessageReader{TOptions}"/> is created
+    /// using the provided <see cref="IBlockingRawMessageReaderFactory{TOptions}"/> factory
     /// </remarks>
     /// <inheritdoc cref="IRawMessageHandlerSubscriber" />
     /// <inheritdoc cref="IDisposable" />
     public class BlockingReaderRawMessageHandlerSubscriber<TOptions> : IRawMessageHandlerSubscriber, IDisposable
-        where TOptions : IPollingRawMessageHandlerOptions
+        where TOptions : IPollingOptions
     {
         private readonly TOptions _options;
-        private readonly IBlockingMessageReaderFactory<TOptions> _factory;
+        private readonly IBlockingRawMessageReaderFactory<TOptions> _factory;
 
         private readonly ConcurrentDictionary<string,
             (Task task, CancellationTokenSource tokenSource)> _readers
@@ -28,7 +28,7 @@ namespace Messaging
                 (Task task, CancellationTokenSource tokenSource)>();
 
         public BlockingReaderRawMessageHandlerSubscriber(
-            IBlockingMessageReaderFactory<TOptions> factory,
+            IBlockingRawMessageReaderFactory<TOptions> factory,
             TOptions options)
         {
             _factory = factory ?? throw new ArgumentNullException(nameof(factory));
@@ -39,7 +39,7 @@ namespace Messaging
         /// Subscribes to the specified topic with the provided blocking/polling-based raw message handler
         /// </summary>
         /// <remarks>
-        /// A Task is created to call the blocking <see cref="IBlockingMessageReader{TOptions}"/>"/>.
+        /// A Task is created to call the blocking <see cref="IBlockingRawMessageReader{TOptions}"/>"/>.
         /// </remarks>
         /// <param name="topic">The topic to subscribe to</param>
         /// <param name="rawHandler">The raw handler to invoke with the bytes received</param>
@@ -90,7 +90,7 @@ namespace Messaging
                     return;
                 }
 
-                IBlockingMessageReader<TOptions> reader;
+                IBlockingRawMessageReader<TOptions> reader;
                 try
                 {
                     reader = _factory.Create(topic, _options);
@@ -111,7 +111,7 @@ namespace Messaging
         internal static async Task ReadMessageLoop(
             string topic,
             IRawMessageHandler rawHandler,
-            IBlockingMessageReader<TOptions> reader,
+            IBlockingRawMessageReader<TOptions> reader,
             TOptions options,
             CancellationToken consumerCancellation)
         {
@@ -124,11 +124,11 @@ namespace Messaging
                     {
                         await rawHandler.Handle(topic, msg, consumerCancellation);
                     }
-                    else if (options.SleepBetweenReads != default(TimeSpan))
+                    else if (options.SleepBetweenPolling != default(TimeSpan))
                     {
                         // Implementations where TryGetMessage will block wait for a message
                         // there's no need to sleep here..
-                        await Task.Delay(options.SleepBetweenReads, consumerCancellation);
+                        await Task.Delay(options.SleepBetweenPolling, consumerCancellation);
                     }
                 } while (!consumerCancellation.IsCancellationRequested);
             }

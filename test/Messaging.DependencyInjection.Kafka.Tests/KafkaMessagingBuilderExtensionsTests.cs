@@ -126,11 +126,11 @@ namespace Messaging.DependencyInjection.Kafka.Tests
             Assert.Equal(typeof(BlockingReaderRawMessageHandlerSubscriber<KafkaOptions>), subscriber.ImplementationType);
 
             var blockingReaderFactory =
-                _fixture.ServiceCollection.FirstOrDefault(d => d.ServiceType == typeof(IBlockingMessageReaderFactory<KafkaOptions>));
+                _fixture.ServiceCollection.FirstOrDefault(d => d.ServiceType == typeof(IBlockingRawMessageReaderFactory<KafkaOptions>));
             Assert.NotNull(blockingReaderFactory);
 
             Assert.Equal(ServiceLifetime.Singleton, blockingReaderFactory.Lifetime);
-            Assert.Equal(typeof(KafkaBlockingMessageReaderFactory), blockingReaderFactory.ImplementationType);
+            Assert.Equal(typeof(KafkaBlockingRawMessageReaderFactory), blockingReaderFactory.ImplementationType);
         }
 
         private void AssertPublisher()

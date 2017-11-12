@@ -80,7 +80,7 @@ namespace Microsoft.Extensions.DependencyInjection
         public static MessagingBuilder AddKafkaSubscriber(this MessagingBuilder builder)
         {
             builder.Services.TryAddSingleton(c => c.GetRequiredService<IOptions<KafkaOptions>>().Value);
-            builder.Services.TryAddSingleton<IBlockingMessageReaderFactory<KafkaOptions>, KafkaBlockingMessageReaderFactory>();
+            builder.Services.TryAddSingleton<IBlockingRawMessageReaderFactory<KafkaOptions>, KafkaBlockingRawMessageReaderFactory>();
             builder.AddRawMessageHandlerSubscriber<BlockingReaderRawMessageHandlerSubscriber<KafkaOptions>>();
             return builder;
         }

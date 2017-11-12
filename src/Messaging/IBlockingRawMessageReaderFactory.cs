@@ -1,8 +1,12 @@
 namespace Messaging
 {
-    public interface IBlockingMessageReaderFactory<in TOptions>
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <typeparam name="TOptions"></typeparam>
+    public interface IBlockingRawMessageReaderFactory<in TOptions>
         where TOptions : IPollingOptions
     {
-        IBlockingMessageReader<TOptions> Create(string topic, TOptions options);
+        IBlockingRawMessageReader<TOptions> Create(string topic, TOptions options);
     }
 }
