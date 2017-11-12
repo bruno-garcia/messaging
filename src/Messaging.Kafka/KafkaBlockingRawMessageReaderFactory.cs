@@ -1,4 +1,5 @@
-﻿using Confluent.Kafka;
+﻿using System;
+using Confluent.Kafka;
 using Confluent.Kafka.Serialization;
 
 namespace Messaging.Kafka
@@ -19,9 +20,32 @@ namespace Messaging.Kafka
         /// <returns><see cref="KafkaBlockingRawMessageReader"/> subscribed to <param name="topic"/></returns>
         public IBlockingRawMessageReader<KafkaOptions> Create(string topic, KafkaOptions options)
         {
-            var consumer = new Consumer<Null, byte[]>(options.Properties, null, Deserializer);
-            options.Subscriber.ConsumerCreatedCallback?.Invoke(consumer);
-            consumer.Subscribe(topic);
+            IKafkaConsumer ConsumerFunc() => 
+                new KafkaConsumerAdapter(new Consumer<Null, byte[]>(options.Properties, null, Deserializer));
+
+            return Create(ConsumerFunc, topic, options);
+        }
+
+        internal IBlockingRawMessageReader<KafkaOptions> Create(
+            Func<IKafkaConsumer> consumerFunc,
+            string topic, 
+            KafkaOptions options)
+        {
+            if (topic == null) throw new ArgumentNullException(nameof(topic));
+            if (options == null) throw new ArgumentNullException(nameof(options));
+
+            var consumer = consumerFunc();
+            try
+            {
+                options.Subscriber.ConsumerCreatedCallback?.Invoke(consumer.KafkaConsumer);
+                consumer.Subscribe(topic);
+            }
+            catch
+            {
+                consumer.Dispose();
+                throw;
+            }
+
             return new KafkaBlockingRawMessageReader(consumer);
         }
 

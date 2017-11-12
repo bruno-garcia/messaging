@@ -1,5 +1,4 @@
 ﻿using System;
-using Confluent.Kafka;
 
 namespace Messaging.Kafka
 {
@@ -10,13 +9,13 @@ namespace Messaging.Kafka
     /// <inheritdoc cref="IDisposable" />
     public class KafkaBlockingRawMessageReader : IBlockingRawMessageReader<KafkaOptions>, IDisposable
     {
-        private readonly Consumer<Null, byte[]> _consumer;
+        private readonly IKafkaConsumer _consumer;
 
         /// <summary>
         /// Creates an new instance of <see cref="KafkaBlockingRawMessageReader"/>
         /// </summary>
         /// <param name="consumer"></param>
-        public KafkaBlockingRawMessageReader(Consumer<Null, byte[]> consumer) => 
+        internal KafkaBlockingRawMessageReader(IKafkaConsumer consumer) => 
             _consumer = consumer ?? throw new ArgumentNullException(nameof(consumer));
 
         /// <summary>
@@ -28,6 +27,8 @@ namespace Messaging.Kafka
         /// <inheritdoc />
         public bool TryGetMessage(out byte[] message, KafkaOptions options)
         {
+            if (options == null) throw new ArgumentNullException(nameof(options));
+
             var read = _consumer.Consume(out var kafkaMessage, options.Subscriber.ConsumeTimeout);
             message = read ? kafkaMessage.Value : null;
             return read;
