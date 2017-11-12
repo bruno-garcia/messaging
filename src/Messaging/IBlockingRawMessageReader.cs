@@ -5,6 +5,7 @@
     /// </summary>
     /// <typeparam name="TOptions"></typeparam>
     public interface IBlockingRawMessageReader<in TOptions>
+        where TOptions : IPollingOptions
     {
         /// <summary>
         /// Tries to read a message from the bus

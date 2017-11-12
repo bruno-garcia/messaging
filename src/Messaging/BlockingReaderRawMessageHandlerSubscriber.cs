@@ -10,14 +10,14 @@ namespace Messaging
     /// </summary>
     /// <remarks>
     /// Creates a task per subscription to call a blocking <see cref="IBlockingMessageReader{TOptions}"/> for messages
-    /// A call to subscribe will return a task which completes when the subcription is done. 
+    /// A call to subscribe will return a task which completes when the subcription is done.
     /// A subscription is considered to be done when a <see cref="IBlockingMessageReader{TOptions}"/> is created
     /// using the provided <see cref="IBlockingMessageReaderFactory{TOptions}"/> factory
     /// </remarks>
     /// <inheritdoc cref="IRawMessageHandlerSubscriber" />
     /// <inheritdoc cref="IDisposable" />
     public class BlockingReaderRawMessageHandlerSubscriber<TOptions> : IRawMessageHandlerSubscriber, IDisposable
-        where TOptions : IPollingRawMessageHandlerOptions
+        where TOptions : IPollingOptions
     {
         private readonly TOptions _options;
         private readonly IBlockingMessageReaderFactory<TOptions> _factory;
@@ -90,7 +90,7 @@ namespace Messaging
                     return;
                 }
 
-                IBlockingMessageReader<TOptions> reader;
+                IBlockingRawMessageReader<TOptions> reader;
                 try
                 {
                     reader = _factory.Create(topic, _options);
@@ -111,7 +111,7 @@ namespace Messaging
         internal static async Task ReadMessageLoop(
             string topic,
             IRawMessageHandler rawHandler,
-            IBlockingMessageReader<TOptions> reader,
+            IBlockingRawMessageReader<TOptions> reader,
             TOptions options,
             CancellationToken consumerCancellation)
         {
@@ -124,11 +124,11 @@ namespace Messaging
                     {
                         await rawHandler.Handle(topic, msg, consumerCancellation);
                     }
-                    else if (options.SleepBetweenReads != default(TimeSpan))
+                    else if (options.SleepBetweenPolling != default(TimeSpan))
                     {
                         // Implementations where TryGetMessage will block wait for a message
                         // there's no need to sleep here..
-                        await Task.Delay(options.SleepBetweenReads, consumerCancellation);
+                        await Task.Delay(options.SleepBetweenPolling, consumerCancellation);
                     }
                 } while (!consumerCancellation.IsCancellationRequested);
             }
