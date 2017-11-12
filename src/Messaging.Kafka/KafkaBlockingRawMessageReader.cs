@@ -6,8 +6,9 @@ namespace Messaging.Kafka
     /// <summary>
     /// An Apache Kafka implementation of <see cref="T:Messaging.IBlockingRawMessageReader`1" />
     /// </summary>
-    /// <inheritdoc />
-    public class KafkaBlockingRawMessageReader : IBlockingRawMessageReader<KafkaOptions>
+    /// <inheritdoc cref="IBlockingRawMessageReader{KafkaOptions}" />
+    /// <inheritdoc cref="IDisposable" />
+    public class KafkaBlockingRawMessageReader : IBlockingRawMessageReader<KafkaOptions>, IDisposable
     {
         private readonly Consumer<Null, byte[]> _consumer;
 
@@ -30,6 +31,12 @@ namespace Messaging.Kafka
             var read = _consumer.Consume(out var kafkaMessage, options.Subscriber.ConsumeTimeout);
             message = read ? kafkaMessage.Value : null;
             return read;
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            _consumer.Dispose();
         }
     }
 }

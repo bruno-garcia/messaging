@@ -82,11 +82,13 @@ Example serialization setup:
 ```csharp
 services.AddMessaging(builder =>
 {
+    builder.AddMessagePack();
+    // or
     builder.AddProtoBuf();
     // or
-    builder.AddXml();
-    // or
     builder.AddJson();
+    // or
+    builder.AddXml();
 });
 ```
 
