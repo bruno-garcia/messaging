@@ -7,7 +7,7 @@ namespace Messaging.Kafka
     /// Creates instances of <see cref="T:Messaging.Kafka.KafkaBlockingRawMessageReader" /> which are already subscribed to the specified topic
     /// </summary>
     /// <inheritdoc />
-    public class KafkaBlockingRawMessageReaderFactory : IBlockingMessageReaderFactory<KafkaOptions>
+    public class KafkaBlockingRawMessageReaderFactory : IBlockingRawMessageReaderFactory<KafkaOptions>
     {
         private static readonly ByteArrayDeserializer Deserializer = new ByteArrayDeserializer();
 
