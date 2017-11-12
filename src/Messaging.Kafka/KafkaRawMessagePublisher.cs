@@ -17,6 +17,10 @@ namespace Messaging.Kafka
         private readonly Producer<Null, byte[]> _producer;
         private static readonly ByteArraySerializer Serializer = new ByteArraySerializer();
 
+        /// <summary>
+        /// Creates a new instance of <see cref="KafkaRawMessagePublisher"/>
+        /// </summary>
+        /// <param name="options"></param>
         public KafkaRawMessagePublisher(KafkaOptions options)
         {
             _options = options ?? throw new ArgumentNullException(nameof(options));

@@ -1,9 +1,11 @@
-﻿namespace Messaging.Kafka
+﻿using System;
+
+namespace Messaging.Kafka
 {
     /// <summary>
     /// Kafka Options
     /// </summary>
-    public class KafkaOptions
+    public class KafkaOptions : IPollingOptions
     {
         /// <summary>
         /// Kafka Properties
@@ -20,5 +22,8 @@
         /// Publisher options
         /// </summary>
         public PublisherOptions Publisher { get; set; } = new PublisherOptions();
+
+        // There's no need to block between reads as it's done by the implementation of Consumer.Consume
+        TimeSpan IPollingOptions.SleepBetweenPolling => default(TimeSpan);
     }
 }
