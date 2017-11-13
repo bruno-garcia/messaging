@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Xunit;
@@ -15,7 +16,7 @@ namespace Messaging.Kafka.Tests
         {
             // Arrange
             var sut = new KafkaProperties();
-            object expected = 1;
+            var expected = Convert.ChangeType(1, propertyInfo.PropertyType);
             // Act
             propertyInfo.SetValue(sut, expected);
             var actual = propertyInfo.GetValue(sut);
