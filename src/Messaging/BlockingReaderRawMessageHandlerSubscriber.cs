@@ -10,7 +10,7 @@ namespace Messaging
     /// </summary>
     /// <remarks>
     /// Creates a task per subscription to call a blocking <see cref="IBlockingRawMessageReader{TOptions}"/> for messages
-    /// A call to subscribe will return a task which completes when the subcription is done. 
+    /// A call to subscribe will return a task which completes when the subcription is done.
     /// A subscription is considered to be done when a <see cref="IBlockingRawMessageReader{TOptions}"/> is created
     /// using the provided <see cref="IBlockingRawMessageReaderFactory{TOptions}"/> factory
     /// </remarks>
@@ -48,6 +48,9 @@ namespace Messaging
         /// <inheritdoc />
         public Task Subscribe(string topic, IRawMessageHandler rawHandler, CancellationToken subscriptionCancellation)
         {
+            if (topic == null) throw new ArgumentNullException(nameof(topic));
+            if (rawHandler == null) throw new ArgumentNullException(nameof(rawHandler));
+
             var subscriptionTask = new TaskCompletionSource<bool>();
 
             _readers.AddOrUpdate(
