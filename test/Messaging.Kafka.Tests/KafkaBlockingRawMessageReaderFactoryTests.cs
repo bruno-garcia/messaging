@@ -26,6 +26,18 @@ namespace Messaging.Kafka.Tests
             consumer.Received(1).Dispose();
         }
 
+        [Theory, AutoSubstituteData]
+        public void Create_NullCallback_Subscribes(string topic)
+        {
+            var consumer = Substitute.For<IKafkaConsumer>();
+            _sut.Create(() => consumer, topic, new KafkaOptions
+            {
+                Properties = { GroupId = "groupId" }
+            });
+
+            consumer.Received(1).Subscribe(topic);
+        }
+
         [Fact]
         public void Create_ReturnsKafkaBlockingRawMessageReader()
         {

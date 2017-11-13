@@ -24,10 +24,8 @@ namespace Messaging.Kafka
         public KafkaRawMessagePublisher(KafkaOptions options)
             : this(
                   () => new KafkaProducerAdapter(
-                      new Producer<Null, byte[]>(options.Properties, null, Serializer)), 
-                  options)
-        {
-        }
+                      new Producer<Null, byte[]>(options.Properties, null, Serializer)),
+                  options) { }
 
         internal KafkaRawMessagePublisher(
             Func<IKafkaProducer> producerFunc,
