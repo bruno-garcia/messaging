@@ -243,6 +243,36 @@ namespace Messaging.Tests
         }
 
         [Theory, AutoSubstituteData]
+        public async Task Dispose_DisposesAllReaders(
+            string topic,
+            IDisposableBlockingRawMessageReader<IPollingOptions> firstReader,
+            IDisposableBlockingRawMessageReader<IPollingOptions> secondReader,
+            [Frozen] IPollingOptions options,
+            IRawMessageHandler firstRawMessageHandler,
+            IRawMessageHandler secondRawMessageHandler,
+            [Frozen] IBlockingRawMessageReaderFactory<IPollingOptions> factory,
+            BlockingReaderRawMessageHandlerSubscriber<IPollingOptions> sut)
+        {
+            // Arrange
+            factory.Create(topic, options).Returns(firstReader, secondReader);
+
+            var firstDisposeEvent = new ManualResetEventSlim();
+            firstReader.When(r => r.Dispose()).Do(r => firstDisposeEvent.Set());
+            var secondDisposeEvent = new ManualResetEventSlim();
+            firstReader.When(r => r.Dispose()).Do(r => secondDisposeEvent.Set());
+
+            await sut.Subscribe(topic, firstRawMessageHandler, None);
+            await sut.Subscribe(topic, secondRawMessageHandler, None);
+
+            // Act
+            sut.Dispose();
+
+            // Assert
+            Assert.True(firstDisposeEvent.Wait(1000));
+            Assert.True(secondDisposeEvent.Wait(1000));
+        }
+
+        [Theory, AutoSubstituteData]
         public async Task Subscribe_NullRawHandler_ThrowsArgumentNull(
             string topic,
             BlockingReaderRawMessageHandlerSubscriber<IPollingOptions> sut)
