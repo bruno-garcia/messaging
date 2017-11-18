@@ -94,7 +94,7 @@ services.AddMessaging(builder =>
 
 Each implementation has some additional settings
 
-#### MessagePack
+##### MessagePack
 
 Define a custom IFormatterResolver and compressiong LZ4:
 
