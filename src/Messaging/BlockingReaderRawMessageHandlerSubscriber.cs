@@ -22,10 +22,13 @@ namespace Messaging
         private readonly TOptions _options;
         private readonly IBlockingRawMessageReaderFactory<TOptions> _factory;
 
-        private readonly ConcurrentDictionary<string,
+        private readonly ConcurrentDictionary<(string topic, IRawMessageHandler rawHandler),
             (Task task, CancellationTokenSource tokenSource)> _readers
-            = new ConcurrentDictionary<string,
+            = new ConcurrentDictionary<(string topic, IRawMessageHandler rawHandler),
                 (Task task, CancellationTokenSource tokenSource)>();
+
+        private readonly ConcurrentDictionary<string, object> _readerCreationLocks
+            = new ConcurrentDictionary<string, object>();
 
         public BlockingReaderRawMessageHandlerSubscriber(
             IBlockingRawMessageReaderFactory<TOptions> factory,
@@ -54,7 +57,7 @@ namespace Messaging
             var subscriptionTask = new TaskCompletionSource<bool>();
 
             _readers.AddOrUpdate(
-                topic,
+                (topic, rawHandler),
                 CreateReader(topic, rawHandler, subscriptionTask, subscriptionCancellation),
                 (_, tuple) =>
                 {
@@ -76,38 +79,68 @@ namespace Messaging
             TaskCompletionSource<bool> subscriptionTask,
             CancellationToken subscriptionCancellation)
         {
-            // Reader cancellation will let us stop this task on Dispose/Unsubscribe
-            var readerCancellation = new CancellationTokenSource();
-
-            var consumerTask = Task.Run(async () => await ReaderTaskCreation(),
-                // The Reader will handle the cancellation by gracefully shutting down.
-                CancellationToken.None);
-
-            return (consumerTask, readerCancellation);
-
-            async Task ReaderTaskCreation()
+            var readerCreationLock = _readerCreationLocks.GetOrAdd(topic, new object());
+            Monitor.Enter(readerCreationLock);
+            try
             {
-                if (subscriptionCancellation.IsCancellationRequested)
+                if (_readers.TryGetValue((topic, rawHandler), out var tuple))
                 {
-                    subscriptionTask.SetCanceled();
-                    return;
+                    if (tuple.task.IsCanceled) subscriptionTask.SetCanceled();
+                    else if (tuple.task.IsCompleted) subscriptionTask.SetResult(true);
+                    else if (tuple.task.IsFaulted) subscriptionTask.SetException(tuple.task.Exception);
+                    
+                    return tuple;
                 }
 
-                IBlockingRawMessageReader<TOptions> reader;
-                try
-                {
-                    reader = _factory.Create(topic, _options);
-                }
-                catch (Exception e)
-                {
-                    subscriptionTask.SetException(e);
-                    return;
-                }
+                // Reader cancellation will let us stop this task on Dispose/Unsubscribe
+                var readerCancellation = new CancellationTokenSource();
 
-                subscriptionTask.SetResult(true);
+                var consumerTask = Task.Run(
+                    async () => await ReaderTaskCreation(
+                        topic,
+                        rawHandler,
+                        subscriptionTask,
+                        subscriptionCancellation,
+                        readerCancellation.Token),
+                    // The Reader will handle the cancellation by gracefully shutting down.
+                    CancellationToken.None);
 
-                await ReadMessageLoop(topic, rawHandler, reader, _options, readerCancellation.Token);
+                return (consumerTask, readerCancellation);
             }
+            finally
+            {
+                Monitor.Exit(readerCreationLock);
+                _readerCreationLocks.TryRemove(topic, out var _);
+            }
+        }
+
+        private async Task ReaderTaskCreation(
+            string topic,
+            IRawMessageHandler rawHandler,
+            TaskCompletionSource<bool> subscriptionTask,
+            CancellationToken subscriptionCancellation,
+            CancellationToken readerCancellation)
+        {
+            if (subscriptionCancellation.IsCancellationRequested)
+            {
+                subscriptionTask.SetCanceled();
+                return;
+            }
+
+            IBlockingRawMessageReader<TOptions> reader;
+            try
+            {
+                reader = _factory.Create(topic, _options);
+            }
+            catch (Exception e)
+            {
+                subscriptionTask.SetException(e);
+                return;
+            }
+
+            subscriptionTask.SetResult(true);
+
+            await ReadMessageLoop(topic, rawHandler, reader, _options, readerCancellation);
         }
 
         // Internal for testability
@@ -142,9 +175,16 @@ namespace Messaging
             }
         }
 
-        public Task Unsubscribe(string topic, IRawMessageHandler _, CancellationToken __)
+        /// <summary>
+        /// Unsubscribes the specified raw handler from the topic
+        /// </summary>
+        /// <param name="topic"></param>
+        /// <param name="rawHandler"></param>
+        /// <param name="_"></param>
+        /// <returns></returns>
+        public Task Unsubscribe(string topic, IRawMessageHandler rawHandler, CancellationToken _)
         {
-            if (_readers.TryRemove(topic, out var tuple))
+            if (_readers.TryRemove((topic, rawHandler), out var tuple))
             {
                 tuple.tokenSource.Cancel();
                 tuple.tokenSource.Dispose();
@@ -155,11 +195,11 @@ namespace Messaging
 
         public void Dispose()
         {
-            foreach (var topic in _readers.Keys)
+            foreach (var (topic, rawHandler) in _readers.Keys)
             {
                 try
                 {
-                    Unsubscribe(topic, null, CancellationToken.None)
+                    Unsubscribe(topic, rawHandler, CancellationToken.None)
                         .GetAwaiter()
                         .GetResult();
                 }

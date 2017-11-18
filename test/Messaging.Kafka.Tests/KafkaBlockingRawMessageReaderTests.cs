@@ -7,15 +7,14 @@ namespace Messaging.Kafka.Tests
 {
     public class KafkaBlockingRawMessageReaderTests
     {
-        [Theory, AutoSubstituteData]
-        public void TryGetMessage_ConsumerReturnsFalse_ReaderReturnsFalse(string topic)
+        [Fact]
+        public void TryGetMessage_ConsumerReturnsFalse_ReaderReturnsFalse()
         {
             // Arrange
             var options = new KafkaOptions();
 
-            Message<Null, byte[]> kafkaMessage;
             var consumer = Substitute.For<IKafkaConsumer>();
-            consumer.Consume(out kafkaMessage, Arg.Any<TimeSpan>())
+            consumer.Consume(out _, Arg.Any<TimeSpan>())
                 .Returns(r => {
                     r[0] = null;
                     return false;
@@ -36,9 +35,8 @@ namespace Messaging.Kafka.Tests
             // Arrange
             var options = new KafkaOptions();
 
-            Message<Null, byte[]> kafkaMessage;
             var consumer = Substitute.For<IKafkaConsumer>();
-            consumer.Consume(out kafkaMessage, Arg.Any<TimeSpan>())
+            consumer.Consume(out _, Arg.Any<TimeSpan>())
                 .Returns(r => {
                     r[0] = new Message<Null, byte[]>(topic, 0, 0, null, expectedMessage, new Timestamp(), null);
                     return true;
@@ -73,7 +71,6 @@ namespace Messaging.Kafka.Tests
 
             consumer.Received(1).Dispose();
         }
-
 
         [Fact]
         public void Constructor_NullConsumer_ThrowsArgumentNull()
