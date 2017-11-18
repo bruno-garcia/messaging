@@ -5,7 +5,8 @@ namespace Messaging.Kafka
     /// <summary>
     /// Kafka Options
     /// </summary>
-    public class KafkaOptions : IPollingOptions
+    /// <inheritdoc />
+    public class KafkaOptions : PollingReaderOptions
     {
         /// <summary>
         /// Kafka Properties
@@ -22,8 +23,10 @@ namespace Messaging.Kafka
         /// Publisher options
         /// </summary>
         public PublisherOptions Publisher { get; set; } = new PublisherOptions();
-
-        // There's no need to block between reads as it's done by the implementation of Consumer.Consume
-        TimeSpan IPollingOptions.SleepBetweenPolling => default(TimeSpan);
+        /// <summary>
+        /// There's no need to block between reads as it's done by the implementation of Consumer.Consume
+        /// </summary>
+        /// <inheritdoc />
+        public override TimeSpan SleepBetweenPolling => default(TimeSpan);
     }
 }

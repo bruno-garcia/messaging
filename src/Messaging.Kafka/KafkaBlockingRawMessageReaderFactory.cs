@@ -13,11 +13,12 @@ namespace Messaging.Kafka
         private static readonly ByteArrayDeserializer Deserializer = new ByteArrayDeserializer();
 
         /// <summary>
-        /// Creates a new <see cref="KafkaBlockingRawMessageReader"/> subscribed already to the specified <param name="topic"/>
+        /// Creates a new <see cref="T:Messaging.Kafka.KafkaBlockingRawMessageReader" /> subscribed already to the specified <param name="topic" />
         /// </summary>
         /// <param name="topic">The topic to subscribe the reader</param>
         /// <param name="options">Kafka Options</param>
-        /// <returns><see cref="KafkaBlockingRawMessageReader"/> subscribed to <param name="topic"/></returns>
+        /// <returns><see cref="T:Messaging.Kafka.KafkaBlockingRawMessageReader" /> subscribed to <param name="topic" /></returns>
+        /// <inheritdoc />
         public IBlockingRawMessageReader<KafkaOptions> Create(string topic, KafkaOptions options)
         {
             IKafkaConsumer ConsumerFunc() => 

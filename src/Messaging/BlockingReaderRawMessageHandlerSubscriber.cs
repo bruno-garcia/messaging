@@ -30,6 +30,11 @@ namespace Messaging
         private readonly ConcurrentDictionary<string, object> _readerCreationLocks
             = new ConcurrentDictionary<string, object>();
 
+        /// <summary>
+        /// Create a new instance of <see cref="BlockingReaderRawMessageHandlerSubscriber{TOptions}"/>
+        /// </summary>
+        /// <param name="factory">The factory to be called on each new subscription</param>
+        /// <param name="options">The polling options</param>
         public BlockingReaderRawMessageHandlerSubscriber(
             IBlockingRawMessageReaderFactory<TOptions> factory,
             TOptions options)
@@ -143,8 +148,7 @@ namespace Messaging
             await ReadMessageLoop(topic, rawHandler, reader, _options, readerCancellation);
         }
 
-        // Internal for testability
-        internal static async Task ReadMessageLoop(
+        private static async Task ReadMessageLoop(
             string topic,
             IRawMessageHandler rawHandler,
             IBlockingRawMessageReader<TOptions> reader,
@@ -166,23 +170,37 @@ namespace Messaging
                         // there's no need to sleep here..
                         await Task.Delay(options.SleepBetweenPolling, consumerCancellation);
                     }
-                } while (!consumerCancellation.IsCancellationRequested);
+
+                    consumerCancellation.ThrowIfCancellationRequested();
+                } while (true);
+            }
+            catch (OperationCanceledException oce)
+            {
+                options?.ReaderStoppingCallback(topic, rawHandler, oce);
+            }
+            catch (Exception ex)
+            {
+                options?.ErrorCallback(topic, rawHandler, ex);
             }
             finally
             {
-                // ReSharper disable once SuspiciousTypeConversion.Global
-                ((IDisposable)reader)?.Dispose();
+                (reader as IDisposable)?.Dispose();
             }
         }
 
         /// <summary>
         /// Unsubscribes the specified raw handler from the topic
         /// </summary>
-        /// <param name="topic"></param>
-        /// <param name="rawHandler"></param>
-        /// <param name="_"></param>
-        /// <returns></returns>
-        public Task Unsubscribe(string topic, IRawMessageHandler rawHandler, CancellationToken _)
+        /// <param name="topic">The topic to unsubscribe</param>
+        /// <param name="rawHandler">The raw handle to unsubscribe</param>
+        /// <param name="token">The unsubsctiption cancellation token</param>
+        /// <remarks>
+        /// Await to ensure continuation only happens once reader is disposed
+        /// </remarks>
+        /// <returns>
+        /// A task that completes once the reader task is no longer executing
+        /// </returns>
+        public Task Unsubscribe(string topic, IRawMessageHandler rawHandler, CancellationToken token)
         {
             if (_readers.TryRemove((topic, rawHandler), out var tuple))
             {
@@ -190,7 +208,11 @@ namespace Messaging
                 tuple.tokenSource.Dispose();
             }
 
-            return tuple.task;
+            var tcs = new TaskCompletionSource<bool>();
+            // Unsubscribing is done once the reader has stopped
+            tuple.task.ContinueWith(readerTask => tcs.SetResult(true), token);
+
+            return tcs.Task;
         }
 
         public void Dispose()

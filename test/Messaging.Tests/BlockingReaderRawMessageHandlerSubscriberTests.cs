@@ -14,6 +14,24 @@ namespace Messaging.Tests
     public class BlockingReaderRawMessageHandlerSubscriberTests
     {
         [Theory, AutoSubstituteData]
+        public async Task Subscribe_CallbackRethrows_UnsubscribeDoesNotFailAwait(
+            string topic,
+            IDisposableBlockingRawMessageReader<IPollingOptions> reader,
+            [Frozen] IPollingOptions options,
+            [Frozen] IRawMessageHandler rawMessageHandler,
+            BlockingReaderRawMessageHandlerSubscriber<IPollingOptions> sut)
+        {
+            // Arrange
+            options.ReaderStoppingCallback = (s, handler, ex) => throw ex;
+            reader.TryGetMessage(out var _, options).Throws<DivideByZeroException>();
+
+            // Act
+            await sut.Subscribe(topic, rawMessageHandler, None);
+            // await doesn't throw on OperationCancelledException
+            await sut.Unsubscribe(topic, rawMessageHandler, None);
+        }
+
+        [Theory, AutoSubstituteData]
         public async Task Subscribe_AfterUnsubscribing_CreatesNewReader(
             string topic,
             IDisposableBlockingRawMessageReader<IPollingOptions> reader,
@@ -36,6 +54,28 @@ namespace Messaging.Tests
 
             // Assert
             factory.Received(2).Create(topic, options);
+        }
+
+        [Theory, AutoSubstituteData]
+        public async Task Unsubscribe_CallbackInvoked(
+            string topic,
+            IDisposableBlockingRawMessageReader<IPollingOptions> reader,
+            [Frozen] IPollingOptions options,
+            [Frozen] IRawMessageHandler rawMessageHandler,
+            [Frozen] IBlockingRawMessageReaderFactory<IPollingOptions> factory,
+            BlockingReaderRawMessageHandlerSubscriber<IPollingOptions> sut)
+        {
+            // Arrange
+            var callbackInvokedEvent = new ManualResetEventSlim();
+            options.ReaderStoppingCallback = (t, handler, arg3) => callbackInvokedEvent.Set();
+            factory.Create(topic, options).Returns(reader);
+
+            // Act
+            await sut.Subscribe(topic, rawMessageHandler, None);
+            await sut.Unsubscribe(topic, rawMessageHandler, None);
+
+            // Assert
+            Assert.True(callbackInvokedEvent.Wait(1000));
         }
 
         [Theory, AutoSubstituteData]

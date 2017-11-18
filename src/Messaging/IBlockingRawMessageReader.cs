@@ -12,7 +12,7 @@
         /// </summary>
         /// <param name="message">The message read if true was returned</param>
         /// <param name="options">options</param>
-        /// <returns></returns>
+        /// <returns><c>true</c> when a message is successfully read. Otherwise <c>false</c></returns>
         bool TryGetMessage(out byte[] message, TOptions options);
     }
 }
