@@ -6,7 +6,4 @@
   <ItemGroup>
     <ProjectReference Include="..\Greentube.Messaging.Sample\Greentube.Messaging.Sample.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Confluent.Kafka" Version="0.11.2" />
-  </ItemGroup>
 </Project>
