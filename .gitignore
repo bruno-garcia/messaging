@@ -1,9 +1,0 @@
-.idea/
-.vs/
-.vscode/
-*.user
-bin/
-obj/
-coverage/
-packages/
-coverage-results.xml
